@@ -1,132 +1,233 @@
-#include "game.hpp"
+#include "pixelcollision.hpp"
+#include "floating.hpp"
+#include "fireball.hpp"
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 #include <iostream>
 #include <ctime>
 #include <vector>
-
-enum class Scene { Menu, Game };
 
 using namespace sf;
 using namespace std;
 
 int main()
 {
-    // Videomode and RenderWindow class under sf namespace
+    srand(static_cast<unsigned>(time(0)));
 
-    sf::VideoMode videoMode({1000, 1400}, 32);                          // setting the window size and bits
-    sf::RenderWindow window(videoMode, "LEAP UP!", sf::Style::Default); // creates name for window and creates close, resize, and minimize button
+    const int windowwidth = 400;
+    const int windowheight = 533;
+    RenderWindow window(VideoMode({windowwidth, windowheight}), "Leap UP");
+    window.setFramerateLimit(60);
 
-    sf::Texture background, start, credits, quit, volume, mute;
-
-    if (!background.loadFromFile("assets/bg.png") ||
-        !start.loadFromFile("assets/start.png") ||
-        !credits.loadFromFile("assets/credits.png") ||
-        !quit.loadFromFile("assets/quit.png") ||
-        !volume.loadFromFile("assets/volume.png") ||
-        !mute.loadFromFile("assets/mute.png"))
+    const int platformCount = 7;
+    const int platformWidth = 60;
+    const int platformHeight = 15;
+    const int playerWidth = 30;
+    const int playerHeight = 30;
+    const int fireballHeight = 30;
+    const int fireballWidth = 30;
+    Texture plattformtexture,playertexture,bgtexture,fireballtexture;
+    
+    if(!plattformtexture.loadFromFile("plat.png",false,IntRect({10,10},{platformWidth,platformHeight}))||
+       !playertexture.loadFromFile("player.png",false,IntRect({0,0},{playerWidth,playerHeight}))||
+       !bgtexture.loadFromFile("bg.png",false,IntRect({0,0},{windowwidth,windowheight}))||
+       !fireballtexture.loadFromFile("fireball.png",false,IntRect({0,0},{fireballWidth, fireballHeight})))
     {
-        return -1; // error loading image
-    }
-
-    sf::Sprite bg(background);
-    sf::Sprite Start(start);
-    sf::Sprite Credit(credits);
-    sf::Sprite Quit(quit);
-    sf::Sprite Volume(volume);
-
-    sf::Music music;//music sprite
-    if (!music.openFromFile("assets/music1.mp3"))
-    {
-        std::cerr << "Failed to load music\n";
+        cout<<"error loading texture"<<endl;
         return -1;
     }
-    music.setLooping(true);//music loop
-    music.play();
+    const Image& image1 = plattformtexture.copyToImage();
+    const Image& image2 = playertexture.copyToImage();
+    const Image& image3 = bgtexture.copyToImage();
+    const Image& image4 = fireballtexture.copyToImage();
 
+    Sprite platform(plattformtexture),player(playertexture),bg(bgtexture),fireballsprite(fireballtexture);
+          
+   
+    vector<Platform>platforms;
+
+
+    for(int i=0;i<platformCount;i++)
+    {
+        float x = static_cast<float>(rand() % (windowwidth - platformWidth)); // Keep inside screen width 
+        float y = i * (windowheight / platformCount); // evenly spaced
+        bool isMoving = rand()%100<30; // 30% chance to be moving
+        platforms.emplace_back(x, y, isMoving);
     
-    bool musicOn = true;
+    }
+    // Player
+    player.setOrigin({15.f, 15.f}); // Center the player sprite
 
-    Start.setPosition({230.f, 500.f});
-    Credit.setPosition({230.f, 700.f});
-    Quit.setPosition({230.f, 900.f});
+    const float movespeed = 3.f;
+    const float playerJumpSpeed = 10.f;
+    const float gravity = 0.2f;
+    float a, b, h = 200; // a = x, b = y
+    float da = 0, db = 0;
+    
+    // Start player on middle platform 
+    int midIndex = platformCount / 2;
+    float platformX = platforms[midIndex].position.x;
+    float platformY = platforms[midIndex].position.y;
 
-    Volume.setScale({0.2f, 0.2f});
-    Start.setScale({0.85f, 0.85f});
-    Credit.setScale({0.85f, 0.85f});
-    Quit.setScale({0.85f, 0.85f});
-
-    Scene currentScene = Scene::Menu;
-
+    a = platformX + platformWidth / 2.f;         // horizontally centered
+    b = platformY - playerHeight/2.f;                // standing on top
+    
+    Fireball fireball;
+    Clock fireballTimer;
 
     while (window.isOpen())
-    { // Loop to hold the window
-
-        while (auto eventOpt = window.pollEvent())
-        { // checks for user actions like closing window,mouse click
-            if (!eventOpt.has_value())
-                continue;
-
-            const sf::Event &event = eventOpt.value();
-
-            if (event.is<sf::Event::Closed>())
+    {
+        while(auto event=window.pollEvent())
+        {
+         if (event->is<Event::Closed>())
             {
                 window.close();
             }
+        }
+   
+        for (auto& plat : platforms)
+         {
+       plat.update(windowwidth, platformWidth);
+        }
+        //Firball
+        if (!fireball.isActive && fireballTimer.getElapsedTime().asSeconds() > 5.f) {
+        vector<float> gaps;
 
-            /*if (event.is<sf::Event::MouseMoved>())
-            {
-                const auto &mouse = event.getIf<sf::Event::MouseMoved>();
-                sf::Vector2f mousePos(static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y));
+        for (int i = 1; i < platforms.size(); ++i) {
+        float upper = platforms[i - 1].position.y + platformHeight;
+        float lower = platforms[i].position.y;
 
-                if (Start.getGlobalBounds().contains(mousePos))
-                {
-                   // Start.setColor(sf::Color(255, 255, 255, 150));//hover effect for start button
-                }
-            }*/
-            if (event.is<sf::Event::MouseButtonPressed>())
-            {
-                const auto &mouse = event.getIf<sf::Event::MouseButtonPressed>();
-                sf::Vector2f mousePos(static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y));
-
-                if (Quit.getGlobalBounds().contains(mousePos))
-                {
-                    return 0;
-                }
-
-                if (Start.getGlobalBounds().contains(mousePos)) {
-                    currentScene = Scene::Game;
-                    runGame(window); // Start the game
-                }
-
-
-                if (Volume.getGlobalBounds().contains(mousePos))
-                {
-
-                    musicOn = !musicOn;
-                    if (musicOn)
-                    {
-                        music.play();
-                        Volume.setTexture(volume);
-                    }
-                    else
-                    {
-                        music.pause();
-                        Volume.setTexture(mute);
-                    }
-                }
-            }
-
-            window.clear(sf::Color(255, 165, 0)); // color
-            window.draw(bg);
-            window.draw(Start);
-            window.draw(Credit);
-            window.draw(Quit);
-            window.draw(Volume);
-            window.display(); // makes the window appear;used during gameloop
+        if (lower - upper > fireballHeight + 10.f) {
+            float centerY = upper + (lower - upper) / 2.f - fireballHeight / 2.f;
+            gaps.push_back(centerY);
         }
     }
-    return 0;
 
-    
+    if (!gaps.empty())
+     {
+        int index = rand() % gaps.size();
+        fireball.spawn(gaps[index]);
+        fireballTimer.restart();
+       }
+    }
+
+        // Movement input
+        if (Keyboard::isKeyPressed(Keyboard::Key::Right)) a += movespeed;
+        if (Keyboard::isKeyPressed(Keyboard::Key::Left)) a -= movespeed;
+
+        // Gravity and fall
+        db += gravity;
+        b += db;
+
+        // Game Over if player falls below screen
+        if (b - playerHeight/2.f > window.getSize().y)
+        {
+            cout << "Game Over!" << endl;
+            window.close();
+        }
+
+        // Scroll world if above height
+        if (b < h)
+        {
+            b = h;
+            for (int i = 0; i < platformCount; ++i)
+            {
+                platforms[i].position.y += -db;
+                if (platforms[i].position.y > window.getSize().y)
+                {
+                    platforms[i].position.y = 0;
+                    platforms[i].position.x = rand() % (window.getSize().x - static_cast<int>(platformWidth));
+                }
+            }
+            if (fireball.isActive)
+              { 
+                 fireball.position.y += -db;
+              }
+        }
+
+        // Fireball update
+        fireball.update(windowwidth);
+
+        // Player bounds
+      float playerLeft   = a - playerWidth / 2.f;
+      float playerRight  = a + playerWidth / 2.f;
+      float playerTop    = b - playerHeight / 2.f;
+      float playerBottom = b + playerHeight / 2.f;
+
+        // Check collision with fireball
+        if (fireball.isActive && fireball.getBounds(fireballWidth, fireballHeight).findIntersection(player.getGlobalBounds()))
+         {
+        float intersectionLeft   = std::max(playerLeft, fireball.position.x);
+        float intersectionTop    = std::max(playerTop, fireball.position.y);
+        float intersectionRight  = std::min(playerRight, fireball.position.x + fireballWidth);
+        float intersectionBottom = std::min(playerBottom, fireball.position.y + fireballHeight);
+
+        float intersectionWidth  = intersectionRight - intersectionLeft;
+        float intersectionHeight = intersectionBottom - intersectionTop;
+        
+        fireballsprite.setPosition(fireball.position); // update position before test
+
+        if (PerfectPixelCollision(player, image2, fireballsprite, image4,
+                                  intersectionLeft, intersectionTop,
+                                  intersectionWidth, intersectionHeight))
+        {
+           cout << "Hit by fireball!" << endl;
+           window.close();
+           }
+        }
+        // Collision with platforms
+      for (int i = 0; i < platformCount; ++i)
+     {
+    Vector2f platPos = platforms[i].position;
+
+
+    float platLeft   = platPos.x;
+    float platRight  = platPos.x + platformWidth;
+    float platTop    = platPos.y;
+    float platBottom = platPos.y + platformHeight;
+
+    if (playerRight > platLeft &&
+        playerLeft < platRight &&
+        playerBottom > platTop &&
+        playerTop < platBottom &&
+        db > 0) // Falling
+    {
+        float intersectionLeft   = std::max(playerLeft, platLeft);
+        float intersectionTop    = std::max(playerTop, platTop);
+        float intersectionRight  = std::min(playerRight, platRight);
+        float intersectionBottom = std::min(playerBottom, platBottom);
+        float intersectionWidth  = intersectionRight - intersectionLeft;
+        float intersectionHeight = intersectionBottom - intersectionTop;
+
+        platform.setPosition(platPos); // platform sprite must match this platform
+        if (PerfectPixelCollision(player, image2, platform, image1,  intersectionLeft, intersectionTop, intersectionWidth, intersectionHeight))
+        {
+            db = -playerJumpSpeed;
+            b = platPos.y - playerHeight / 2.f; // Jump back up
+        }
+    }
 }
+
+
+        player.setPosition({a, b});
+
+        // Draw
+        window.clear();
+        window.draw(bg);
+        for (const auto& plat : platforms)
+         {
+        platform.setPosition(plat.position);
+        window.draw(platform);
+         }
+        if (fireball.isActive) 
+        {
+         fireballsprite.setPosition(fireball.position);
+         window.draw(fireballsprite);
+       }
+
+        window.draw(player);
+        window.display();
+    }
+
+    return 0;
+}
+//
