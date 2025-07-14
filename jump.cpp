@@ -27,7 +27,7 @@ int main()
     
     if(!plattformtexture.loadFromFile("assets/plat.png",false,IntRect({0,0},{platformWidth,platformHeight}))||
        !playertexture.loadFromFile("assets/Idle2.png",false,IntRect({0,0},{playerwidth,playerHeight}))||
-       !bgtexture.loadFromFile("assets/bg.png",false,IntRect({0,0},{windowwidth,windowheight})))
+       !bgtexture.loadFromFile("assets/bg1.png",false,IntRect({0,0},{windowwidth,windowheight})))
     {
         cout<<"error loading texture"<<endl;
         return -1;
