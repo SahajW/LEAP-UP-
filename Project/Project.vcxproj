@@ -132,8 +132,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="platform.cpp" />
+    <ClCompile Include="oke.cpp" />
+    <ClCompile Include="PLatform.cpp" />
+    <ClCompile Include="platform1.cpp" />
     <ClCompile Include="platform2.cpp" />
+    <ClCompile Include="window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Platform.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
