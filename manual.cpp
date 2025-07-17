@@ -17,7 +17,7 @@ void runManual(sf::RenderWindow& window){
     sf::Sprite Manualp(manualp);
     sf::Sprite Back(back);
 
-    Back.setPosition({629.f, 1179.f});
+    Back.setPosition({632.f, 1180.f});
 
     Scene currentScene = Scene::Manual;
     Back.setScale({0.5f, 0.5f});
@@ -30,11 +30,21 @@ void runManual(sf::RenderWindow& window){
                 continue;
 
             const sf::Event &event = eventOpt.value();
+            if(currentScene ==Scene::Manual){
+                sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
             if (event.is<sf::Event::MouseButtonPressed>())
             {
-                const auto &mouse = event.getIf<sf::Event::MouseButtonPressed>();
-                sf::Vector2f mousePos(static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y));
+                const auto *mouseButtonPressedEvent = event.getIf<sf::Event::MouseButtonPressed>();
+                if (mouseButtonPressedEvent && mouseButtonPressedEvent->button == sf::Mouse::Button::Left) // Check for left mouse button click
+                {
+                    if (Back.getGlobalBounds().contains(mousePos))
+                    {
+                        currentScene = Scene::Menu; // Change scene to Menu
+                        return; // Return to menu
+                    }
+                }
+                
 
                 if (Back.getGlobalBounds().contains(mousePos))
                 {
@@ -50,6 +60,7 @@ void runManual(sf::RenderWindow& window){
              window.draw(Manualp);
              window.draw(Back);
              window.display();
+        }
         }
     }
 }
