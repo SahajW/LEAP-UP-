@@ -29,9 +29,9 @@ int main()
     const int platformCount = 16;
 
 
-    Texture bgtexture, plattformtexture;
+    Texture bgtexture, plattformtexture, jplayertexture, playertexture;
 
-    if (!bgtexture.loadFromFile("bg.jpg")) {
+    if (!bgtexture.loadFromFile("bg.png")) {
         cout << "Error loading background texture" << endl;
         return -1;
     }
@@ -41,6 +41,15 @@ int main()
         return -1;
     }
 
+    if (!jplayertexture.loadFromFile("jplayer.png")) {
+        cout << "Error loading jplayer texture" << endl;
+        return -1;
+    }
+
+    if (!playertexture.loadFromFile("player.png")) {
+        cout << "Error loading player texture" << endl;
+        return -1;
+    }
 
 
     // --- IMPORTANT CHANGE: Get platform dimensions directly from the texture ---
@@ -50,10 +59,16 @@ int main()
     // --- END IMPORTANT CHANGE ---
 
 
+    
 
     // Create background sprite
-    Sprite bg(bgtexture);
+    Sprite bg(bgtexture), jp(jplayertexture), player(playertexture);
 
+    
+    jp.scale({ 0.2f, 0.2f }); // Scale down the player sprite to fit the game
+    jp.setOrigin({0,0 }); //setting its scale to center 
+
+	player.setScale({ 0.7f, 0.7f }); // Scale down the player sprite to fit the game
 
     // Platforms
     vector<RectangleShape> plat(platformCount);
@@ -71,8 +86,7 @@ int main()
 
     // Player
     const float playerRadius = windowSize.y / 60.0f;
-    CircleShape player(playerRadius);
-    player.setFillColor(Color::Yellow);
+
     player.setOrigin({ playerRadius, playerRadius });
 
     float a, b; // a = x, b = y
@@ -84,8 +98,8 @@ int main()
     float platformX = plat[midIndex].getPosition().x;
     float platformY = plat[midIndex].getPosition().y;
 
-    a = platformX + platformWidth / 2.f;          // horizontally centered
-    b = platformY - playerRadius;                  // standing on top
+    a = platformX + platformWidth / 2.f;           // horizontally centered
+    b = platformY - playerRadius;                   // standing on top
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +125,8 @@ int main()
     // Initialize to a high value so it doesn't block initial spawn
     jetpackEffectCooldownTimer.restart(); // Will be reset when jetpack effect ends
     // --- Jetpack Integration End ---
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     while (window.isOpen())
     {
@@ -123,12 +138,12 @@ int main()
             }
         }
 
-       
+
         // Movement input
         float moveSpeed = windowSize.x / 180.0f;
         if (Keyboard::isKeyPressed(Keyboard::Key::Right)) a += moveSpeed;
         if (Keyboard::isKeyPressed(Keyboard::Key::Left)) a -= moveSpeed;
-        
+
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Gravity and fall
@@ -140,7 +155,7 @@ int main()
             db += 0.2f; // Normal gravity
         }
         // --- Jetpack Effect Modification End ---
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
         b += db;
 
         // Game Over if player falls below screen
@@ -172,11 +187,11 @@ int main()
             // --- Jetpack Scrolling End ---
         }
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // --- Jetpack Spawning Logic Start ---
         // Spawn jetpack every 10-20 seconds if not active and player is not jetpacked
         if (!jetpackItem.isActive && !isJetpacked &&
-            jetpackSpawnTimer.getElapsedTime().asSeconds() > (30 + rand() % 10) &&          //"Increased time for jetpack spawnning"
+            jetpackSpawnTimer.getElapsedTime().asSeconds() > (10 + rand() % 5) &&           //"Increased time for jetpack spawnning"
             jetpackEffectCooldownTimer.getElapsedTime().asSeconds() > jetpackEffectCooldownDuration) {
             vector<int> validPlatformIndices;
 
@@ -184,7 +199,7 @@ int main()
             // Find platforms that are currently visible on screen (or near player)
             for (int i = 0; i < platformCount; ++i) {
                 float platY = plat[i].getPosition().y;
-                
+
                 // Only spawn on platforms that are within the visible game area above the bottom
                 if (platY < windowSize.y / 2.0f && platY > 0.f) { // Ensure it's not too high up or off screen
                     validPlatformIndices.push_back(i);
@@ -203,14 +218,15 @@ int main()
             }
         }
         // --- Jetpack Spawning Logic End ---
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // --- Jetpack Duration Logic Start ---
         // Turn off jetpack after 5 seconds of active use
         if (isJetpacked && jetpackActiveTimer.getElapsedTime().asSeconds() > 5.0f) {
             isJetpacked = false;
+            jetpackEffectCooldownTimer.restart(); // --- NEW: Start cooldown timer ---
         }
         // --- Jetpack Duration Logic End ---
 
@@ -219,7 +235,7 @@ int main()
             jetpackItem.deactivate();
         }
         // --- Jetpack Auto-Despawn if not picked up End ---
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
         for (int i = 0; i < platformCount; ++i)
@@ -243,12 +259,14 @@ int main()
             }
         }
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // --- Jetpack Collision with Player Start ---
         if (jetpackItem.isActive && jetpackItem.getBounds().findIntersection(player.getGlobalBounds())) {
-            jetpackItem.deactivate();                    // Despawn
-            isJetpacked = true;                      // Activate shield
-            jetpackActiveTimer.restart();           // Start timer
+            jetpackItem.deactivate();                       // Despawn
+            isJetpacked = true;                             // Activate jetpack state
+            jetpackActiveTimer.restart();                   // Start jetpack active timer
+                    
+            jetpackEffectCooldownTimer.restart();           // --- NEW: Reset cooldown timer immediately on pickup ---
         }
         // --- Jetpack Collision with Player End ---
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,20 +286,45 @@ int main()
 
         player.setPosition({ a, b });
 
+        // --- NEW: Position jetpack flames relative to player ---
+        // Adjust these offsets to fine-tune where the flames appear
+        
+        /*flame1.setPosition(player.getPosition().x - playerRadius * 0.3f, player.getPosition().y + playerRadius * 0.8f);*/
+        
+
+        jp.setPosition(sf::Vector2f(
+            player.getPosition().x , 
+            player.getPosition().y  
+        ));
+        // --- END NEW ---
+
+
         // Draw
         window.clear();
         window.draw(bg);
-        window.draw(player);
+        //window.draw(player); // Draw the main player circle
+
+        ////////////////////////////////////////////////////////////////////////////////////
+		
+        // Draw player with jetpack or normal player
+
+        if (isJetpacked) {
+            window.draw(jp);
+        }
+        else {
+            window.draw(player);
+        }
+        ///////////////////////////////////////////////////////////////////////////////////
+
         for (const auto& p : plat)
         {
             window.draw(p);
         }
-        // --- Draw Jetpack Start ---
+        // --- Draw Jetpack Item Start ---
         if (jetpackItem.isActive) {
             jetpackItem.draw(window);
         }
-        // --- Draw Jetpack End ---
-
+        // --- Draw Jetpack Item End ---
         window.display();
     }
 
