@@ -1,0 +1,17 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "C:\\Users\\ACER\\Documents\\SFML-3.0.0-windows-gcc-14.2.0-mingw-64-bit\\SFML-3.0.0\\include"
+      ],
+      "defines": [],
+      "compilerPath": "C:/Users/ACER/Documents/winlibs-x86_64-posix-seh-gcc-14.2.0-llvm-19.1.7-mingw-w64ucrt-12.0.0-r3/mingw64/bin/g++.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-gcc-x64"
+    }
+  ],
+  "version": 4
+}
