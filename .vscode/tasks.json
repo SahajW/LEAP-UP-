@@ -8,14 +8,17 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "C:/Users/ACER/Documents/SFML-project/check.cpp",
+                "C:/Users/ACER/Documents/SFML-project/femain.cpp",
+                "C:/Users/ACER/Documents/SFML-project/manual.cpp",
                 "-IC:/Users/ACER/Documents/SFML-3.0.0-windows-gcc-14.2.0-mingw-64-bit/SFML-3.0.0/include",
                 "-LC:/Users/ACER/Documents/SFML-3.0.0-windows-gcc-14.2.0-mingw-64-bit/SFML-3.0.0/lib",
                 "-lsfml-graphics",
                 "-lsfml-window",
                 "-lsfml-system",
+                "-lsfml-audio",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}.exe"
+                "C:/Users/ACER/Documents/SFML-project/check.exe"
             ],
             "group": "build",
             "problemMatcher": [
@@ -48,4 +51,3 @@
         }
     ]
 }
-
