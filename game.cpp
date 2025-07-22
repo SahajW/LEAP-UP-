@@ -192,7 +192,7 @@ void runGame(RenderWindow &window)
     shieldAura.setFillColor(Color(0, 0, 255, 100));
     shieldAura.setOrigin({shieldAura.getRadius(), shieldAura.getRadius()});
 
-    pause.setPosition({900.f, 0.f});
+    pause.setPosition({850.f, 0.f});
     pause.setScale({0.25f, 0.25f});
 
     quit.setPosition({300.f, 500.f});

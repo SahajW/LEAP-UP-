@@ -8,7 +8,6 @@
             "args": [
                 "game.cpp",
                 "manual.cpp",
-                "player.cpp",
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
