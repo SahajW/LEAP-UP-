@@ -15,10 +15,17 @@ using namespace std;
 
 void runGame(RenderWindow &window)
 {
+    VideoMode desktopMode = VideoMode::getDesktopMode();
+
+    // Calculate window size as a percentage of screen size (e.g., 70% width, 60% height)
+    const sf::Vector2u windowSize(
+        static_cast<unsigned int>((desktopMode.size.x / 2.65f)),
+        static_cast<unsigned int>((desktopMode.size.y / 1.142857143f)));
     srand(static_cast<unsigned>(time(0)));
 
-    const int windowwidth = 1000;
-    const int windowheight = 1400;
+    const int windowwidth = desktopMode.size.x / 2.65f;
+    const int windowheight = desktopMode.size.y / 1.142857143f;
+
     window.setFramerateLimit(60);
 
     const int platformCount = 15;
@@ -795,6 +802,5 @@ void runGame(RenderWindow &window)
             outputFile << highscore;
             outputFile.close();
         }
-
     }
 }

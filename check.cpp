@@ -119,20 +119,29 @@ int main()
     mouse.setLooping(false); // mouse sound not looping
 
     bool musicOn = true;
-    Menu.setPosition({275.f, 220.f}); // Set the position of the menu background
-    Start.setPosition({240.f, 350.f});
-    Manual.setPosition({240.f, 550.f});
-    Credit.setPosition({240.f, 750.f});
-    Quit.setPosition({240.f, 950.f});
-    Start2.setPosition({240.f, 350.f});
+    //Menu.setPosition({275.f, 220.f}); // Set the position of the menu background
+    Menu.setPosition({windowSize.x /3.636363636f , windowSize.y /6.363636364f});
+    //Start.setPosition({240.f, 350.f});
+    Start.setPosition({windowSize.x / 4.166666667f, windowSize.y / 4.f});
+    // Manual.setPosition({240.f, 550.f});
+    Manual.setPosition({windowSize.x / 4.166666667f, windowSize.y / 2.545454545f});
+    //Credit.setPosition({240.f, 750.f});
+    Credit.setPosition({windowSize.x / 4.166666667f, windowSize.y / 1.866666667f});
+    //Quit.setPosition({240.f, 950.f});
+    Quit.setPosition({windowSize.x / 4.166666667f, windowSize.y / 1.473684211f});
+    //Start2.setPosition({240.f, 350.f});
+    Start2.setPosition({windowSize.x / 4.166666667f, windowSize.y / 4.f});
 
-    Volume.setScale({0.2f, 0.2f});
-    Menu.setScale({0.8f, 0.8f});
-    Start.setScale({0.6f, 0.6f});
-    Manual.setScale({0.6f, 0.6f});
-    Credit.setScale({0.6f, 0.6f});
-    Quit.setScale({0.6f, 0.6f});
-    Start2.setScale({0.6f, 0.6f});
+    // Volume.setScale({0.2f, 0.2f});
+    Volume.setScale({windowSize.x / 5000.f, windowSize.y / 7000.f});
+    //Menu.setScale({0.8f, 0.8f});
+    Menu.setScale({windowSize.x / 1250.f, windowSize.y / 1750.f});
+    //Start.setScale({0.6f, 0.6f});
+    Start.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
+    Manual.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
+    Credit.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
+    Quit.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
+    Start2.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
 
     Scene currentScene = Scene::Menu;
     fadeIn(window, bg, Start, Credit, Quit, Volume, music1, Manual, Menu); // Fade in effect
