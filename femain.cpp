@@ -11,16 +11,15 @@
 
 using namespace sf;
 using namespace std;
-
-void runGame(RenderWindow& window)
+void runGame(RenderWindow &window)
 {
 
-     srand(static_cast<unsigned>(time(0)));
-     
+    srand(static_cast<unsigned>(time(0)));
+
     window.setFramerateLimit(60);
-     
-    const int windowwidth=window.getSize().x;
-    const int windowheight=window.getSize().y;
+
+    const int windowwidth = window.getSize().x;
+    const int windowheight = window.getSize().y;
 
     const int platformCount = 15;
     const int platformWidth = 128;
@@ -33,6 +32,11 @@ void runGame(RenderWindow& window)
     const float gameHeight = 1400.f;
     int score = 0;
     float worldHeight = 0.f;
+
+    int lastShieldScore = -1000;
+    int lastJetpackScore = -1000;
+    const int shieldInterval = 50;   // spawn every 300 score
+    const int jetpackInterval = 200; // spawn every 500 score
 
     int highscore = 0;
     ifstream inputFile("highscore.txt");
@@ -63,7 +67,7 @@ void runGame(RenderWindow& window)
         pauseTexture, resumeTexture,
         QuitTexture, resumeTexture2, QuitTexture2;
 
-    if(!platformTexture.loadFromFile("plat1.png", false, IntRect({0, 0}, {platformWidth, platformHeight})) ||
+    if (!platformTexture.loadFromFile("plat1.png", false, IntRect({0, 0}, {platformWidth, platformHeight})) ||
         !thornTexture.loadFromFile("plat3.png", false, IntRect({0, 0}, {platformWidth, platformHeight})) ||
         !disappearingTexture.loadFromFile("plat2.png", false, IntRect({0, 0}, {platformWidth, platformHeight})) ||
         !playerright.loadFromFile("player.png", false, IntRect({0, 0}, {playerWidth, playerHeight})) ||
@@ -76,11 +80,10 @@ void runGame(RenderWindow& window)
         !QuitTexture.loadFromFile("quit.png") ||
         !resumeTexture2.loadFromFile("resume2.png") ||
         !QuitTexture2.loadFromFile("exit2.png"))
-      {
+    {
         cout << "Error loading one or more textures" << endl;
-        return ;
+        return;
     }
-
 
     const Image &image1 = platformTexture.copyToImage();
     const Image &image2 = playerright.copyToImage();
@@ -96,12 +99,10 @@ void runGame(RenderWindow& window)
         pause(pauseTexture), resume(resumeTexture), quit(QuitTexture), resume2(resumeTexture2), quit2(QuitTexture2);
     bool facingRight = true;
 
-    // jp.scale({ 0.2f, 0.2f }); // Scale down the player sprite to fit the game
     jp.setOrigin({playerWidth / 2.f, playerHeight / 2.f}); // setting its scale to center
 
     // platform creation
     vector<Platform *> platforms;
-
     float verticalSpacing = windowheight / static_cast<float>(platformCount);
     float currentY = windowheight - verticalSpacing;
 
@@ -116,7 +117,7 @@ void runGame(RenderWindow& window)
         if (r < 70)
             plat = new Platform(x, y, false, PlatformType::Normal);
         else if (r < 90)
-            plat = new Platform(x, y, true, PlatformType::Moving);
+            plat = new Platform(x, y, true, PlatformType::Moving, static_cast<float>(rand() % 3 + 2)); // speed between 2 and 4
         else if (r < 95)
             plat = new ThornPlatform(x, y);
         else
@@ -161,20 +162,18 @@ void runGame(RenderWindow& window)
     catch (const std::runtime_error &e)
     {
         cout << e.what() << endl;
-        return ;
+        return;
     }
 
-    Clock jetpackSpawnTimer;
     Clock jetpackActiveTimer;
     Clock jetpackLifetimeTimer; // New timer to auto-despawn jetpack
     bool isJetpacked = false;
     const float jetpackBoostSpeed = -8.0f; // Stronger upward velocity when jetpacked
 
-    // New: Clock for jetpack spawn cooldown after effect wears off
+    //  Clock for jetpack spawn cooldown after effect wears off
     Clock jetpackEffectCooldownTimer;
-    const float jetpackEffectCooldownDuration = 5.0f; // For example, 5 seconds cooldown
-    // Initialize to a high value so it doesn't block initial spawn
-    jetpackEffectCooldownTimer.restart(); // Will be reset when jetpack effect ends
+    const float jetpackEffectCooldownDuration = 5.0f; // cooldown duration in seconds
+    jetpackEffectCooldownTimer.restart();             // Will be reset when jetpack effect ends
     // --- Jetpack Integration End ---
 
     Fireball fireball;
@@ -182,9 +181,7 @@ void runGame(RenderWindow& window)
 
     Shield shield;
     shield.load();
-    Clock shieldSpawnTimer;
     Clock shieldActiveTimer;
-    Clock shieldLifetimeTimer;
     bool isShielded = false;
     float shieldWidth = shield.texture.getSize().x * shield.scaleFactor;
     float shieldHeight = shield.texture.getSize().y * shield.scaleFactor;
@@ -223,7 +220,7 @@ void runGame(RenderWindow& window)
                     }
                     else if (quit.getGlobalBounds().contains(mousePos))
                     {
-                        return ; // Return from runGame → back to main menu
+                        return; // Return from runGame → back to main menu
                     }
                 }
                 else
@@ -262,6 +259,12 @@ void runGame(RenderWindow& window)
 
         if (!isPaused)
         {
+            score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
+            scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
+            bool hardMode = (score >= 1000);                   // Hard mode starts at score 1000
+
+            float gravity = hardMode ? 0.25f : 0.2f;
+            float playerJumpSpeed = hardMode ? 12.f : 10.f;
 
             if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)))
             {
@@ -290,9 +293,10 @@ void runGame(RenderWindow& window)
             }
 
             // Fireball spawn logic
-            if (!fireball.isActive && fireballTimer.getElapsedTime().asSeconds() > 3.f)
+            if (!fireball.isActive && fireballTimer.getElapsedTime().asSeconds() > 2.5f)
             {
                 vector<float> gaps;
+
                 for (size_t i = 1; i < platforms.size(); ++i)
                 {
                     Platform *prevPlat = platforms[i - 1];
@@ -310,14 +314,25 @@ void runGame(RenderWindow& window)
                     if (lower - upper > fireballHeight + 10.f)
                     {
                         float centerY = upper + (lower - upper) / 2.f - fireballHeight / 2.f;
-                        gaps.push_back(centerY);
+
+                        //  Only add the gap if it's ABOVE the player
+                        float verticalVelocity = db; // Or however you track jump/gravity
+                        float futurePlayerY = player.getPosition().y + verticalVelocity * 15.f;
+
+                        if (centerY < futurePlayerY)
+                        {
+                            gaps.push_back(centerY);
+                        }
                     }
                 }
 
                 if (!gaps.empty())
                 {
                     int index = rand() % gaps.size();
-                    fireball.spawn(gaps[index]);
+
+                    //  Spawn the fireball at a valid Y, with random direction support
+                    fireball.spawn(gaps[index], windowwidth);
+
                     fireballTimer.restart();
                 }
             }
@@ -349,8 +364,7 @@ void runGame(RenderWindow& window)
                 cout << "Game Over!" << endl;
                 window.close();
             }
-            score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
-            scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
+            
 
             if (score > highscore)
             {
@@ -373,9 +387,11 @@ void runGame(RenderWindow& window)
                     {
                         float newX = static_cast<float>(rand() % (window.getSize().x - platformWidth));
 
-                        // 🆕 Calculate a good Y position above current platforms
+                        //  Calculate a good Y position above current platforms
                         float minGap = 60.f;       // Minimum vertical distance between platforms
                         float maxY = windowheight; // Start with screen height
+                        
+                        float platformspeed = hardMode ? 4.f : 2.f; // Speed for moving platforms
 
                         // Find the highest (topmost) platform
                         for (auto *plat : platforms)
@@ -394,15 +410,28 @@ void runGame(RenderWindow& window)
                         int r = rand() % 100;
                         Platform *newPlat = nullptr;
 
-                        if (r < 70)
-                            newPlat = new Platform(newX, newY, false, PlatformType::Normal);
-                        else if (r < 90)
-                            newPlat = new Platform(newX, newY, true, PlatformType::Moving);
-                        else if (r < 95)
-                            newPlat = new ThornPlatform(newX, newY);
+                        if (!hardMode)
+                        {
+                            if (r < 70)
+                                newPlat = new Platform(newX, newY, false, PlatformType::Normal);
+                            else if (r < 90)
+                                newPlat = new Platform(newX, newY, true, PlatformType::Moving, platformspeed);
+                            else if (r < 95)
+                                newPlat = new DisappearingPlatform(newX, newY);
+                            else
+                                newPlat = new ThornPlatform(newX, newY);
+                        }
                         else
-                            newPlat = new DisappearingPlatform(newX, newY);
-
+                        {
+                            if (r < 65)
+                                newPlat = new Platform(newX, newY, false, PlatformType::Normal);
+                            else if (r < 85)
+                                newPlat = new Platform(newX, newY, true, PlatformType::Moving, platformspeed);
+                            else if (r < 95)
+                                newPlat = new DisappearingPlatform(newX, newY);
+                            else
+                                newPlat = new ThornPlatform(newX, newY);
+                        }
                         platforms[i] = newPlat;
                     }
                 }
@@ -423,10 +452,11 @@ void runGame(RenderWindow& window)
             }
 
             // --- Jetpack Spawning Logic Start ---
-            // Spawn jetpack every 10-20 seconds if not active and player is not jetpacked
-            if (!jetpackItem.isActive && !isJetpacked &&
-                jetpackSpawnTimer.getElapsedTime().asSeconds() > (10 + rand() % 5) && //"Increased time for jetpack spawnning"
+            // Spawn jetpack when score increases by jetpackInterval and player isn't already jetpacked
+            if ((score / jetpackInterval) > (lastJetpackScore / jetpackInterval) &&
+                !jetpackItem.isActive && !isJetpacked &&
                 jetpackEffectCooldownTimer.getElapsedTime().asSeconds() > jetpackEffectCooldownDuration)
+
             {
                 vector<int> validPlatformIndices;
 
@@ -448,11 +478,10 @@ void runGame(RenderWindow& window)
                     float x = platforms[randomIndex]->position.x + (platformWidth - (jetpackItem.texture.getSize().x * jetpackItem.scaleFactor)) / 2.f;
                     float y = platforms[randomIndex]->position.y - (jetpackItem.texture.getSize().y * jetpackItem.scaleFactor) - 5.f; // Slightly above platform
                     jetpackItem.spawn(x, y);
-
-                    jetpackLifetimeTimer.restart(); // Start auto-despawn timer here
-                    jetpackSpawnTimer.restart();    // Reset spawn timer
+                    lastJetpackScore = (score / jetpackInterval) * jetpackInterval;
                 }
             }
+
             // --- Jetpack Spawning Logic End ---
 
             // --- Jetpack Duration Logic Start ---
@@ -460,19 +489,11 @@ void runGame(RenderWindow& window)
             if (isJetpacked && jetpackActiveTimer.getElapsedTime().asSeconds() > 5.0f)
             {
                 isJetpacked = false;
-                jetpackEffectCooldownTimer.restart(); // --- NEW: Start cooldown timer ---
+                jetpackEffectCooldownTimer.restart(); //  Start cooldown timer
             }
-            // --- Jetpack Duration Logic End ---
-
-            // --- Jetpack Auto-Despawn if not picked up Start ---
-            if (jetpackItem.isActive && jetpackLifetimeTimer.getElapsedTime().asSeconds() > 10.0f)
-            {
-                jetpackItem.deactivate();
-            }
-            // --- Jetpack Auto-Despawn if not picked up End ---
-
             // Update fireball
-            fireball.update(windowwidth);
+            float fireballspeed = hardMode ? 9.f : 6.f; // Adjust speed based on difficulty
+            fireball.update(windowwidth,fireballspeed);
 
             // Calculate player bounds
             float playerLeft = a - playerWidth / 2.f;
@@ -480,8 +501,10 @@ void runGame(RenderWindow& window)
             float playerTop = b - playerHeight / 2.f;
             float playerBottom = b + playerHeight / 2.f;
 
-            // Spawn shield powerup between 5 and 15 seconds, if none active or shielded
-            if (!shield.isActive && !isShielded && shieldSpawnTimer.getElapsedTime().asSeconds() > (5 + rand() % 10))
+            // Spawn shield when score increases by interval
+            if ((score / shieldInterval) > (lastShieldScore / shieldInterval) &&
+                !shield.isActive && !isShielded)
+
             {
                 vector<int> validPlatformIndices;
 
@@ -492,7 +515,7 @@ void runGame(RenderWindow& window)
                         continue;
 
                     float platY = plat->position.y;
-                    if (platY <= h && platY > 0.f)
+                    if (platY <= h && platY > 0.f) // On screen
                     {
                         validPlatformIndices.push_back(i);
                     }
@@ -502,11 +525,9 @@ void runGame(RenderWindow& window)
                 {
                     int randomIndex = validPlatformIndices[rand() % validPlatformIndices.size()];
                     float x = platforms[randomIndex]->position.x + (platformWidth - shieldWidth) / 2.f;
-                    float y = platforms[randomIndex]->position.y - shieldHeight; // just above platform
+                    float y = platforms[randomIndex]->position.y - shieldHeight;
                     shield.spawn(x, y);
-
-                    shieldLifetimeTimer.restart();
-                    shieldSpawnTimer.restart();
+                    lastShieldScore = (score / shieldInterval) * shieldInterval; // ✅ update spawn tracking
                 }
             }
 
@@ -552,84 +573,98 @@ void runGame(RenderWindow& window)
             }
 
             // Collision with platforms
-            for (auto *plat : platforms)
+            // Only attempt platform collision if the player is falling fast enough
+            if (db > 3.25f)
             {
-                if (!plat->isVisible())
-                    continue;
+                bool jumped = false; // Track whether a valid jump (collision) happened
 
-                Vector2f platPos = plat->position;
-
-                float platLeft = platPos.x;
-                float platRight = platPos.x + platformWidth;
-                float platTop = platPos.y;
-                float platBottom = platPos.y + platformHeight;
-            
-                if (playerRight > platLeft && playerLeft < platRight &&
-                    playerBottom > platTop && playerTop < platBottom && db > 3)
+                for (auto *plat : platforms) // Loop through all platforms
                 {
-                    if (plat->type == PlatformType::Thorn)
-                    {
-                        cout << "Game Over! Stepped on thorns." << endl;
-                        window.close();
-                        break;
-                    }
+                    if (!plat->isVisible()) // Skip invisible platforms
+                        continue;
 
-                    // --- Touch Detected (before collision check) ---
-                    if (plat->type == PlatformType::Disappearing)
+                    Vector2f platPos = plat->position; // Get platform's position
+
+                    // Calculate platform's bounding box
+                    float platLeft = platPos.x;
+                    float platRight = platPos.x + platformWidth;
+                    float platTop = platPos.y;
+                    float platBottom = platPos.y + platformHeight;
+
+                    // Check if the player's bounding box intersects the platform's bounding box
+                    if (playerRight > platLeft && playerLeft < platRight &&
+                        playerBottom > platTop && playerTop < platBottom)
                     {
-                        DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat);
-                        if (dp)
+                        // If it's a thorn platform, trigger game over
+                        if (plat->type == PlatformType::Thorn)
                         {
-                            dp->onPlayerTouch(); // ✅ Record that player has landed
+                            cout << "Game Over! Stepped on thorns." << endl;
+                            window.close();
+                            break;
                         }
-                    }
 
-                    // Compute intersection area for pixel-perfect check
-                    float intersectionLeft = std::max(playerLeft, platLeft);
-                    float intersectionTop = std::max(playerTop, platTop);
-                    float intersectionRight = std::min(playerRight, platRight);
-                    float intersectionBottom = std::min(playerBottom, platBottom);
-                    float intersectionWidth = intersectionRight - intersectionLeft;
-                    float intersectionHeight = intersectionBottom - intersectionTop;
-
-                    Sprite *collisionSprite = nullptr;
-                    switch (plat->type)
-                    {
-                    case PlatformType::Normal:
-                    case PlatformType::Moving:
-                        collisionSprite = &normalPlatformSprite;
-                        break;
-                    case PlatformType::Disappearing:
-                        collisionSprite = &disappearingSprite;
-                        break;
-                    default:
-                        collisionSprite = &normalPlatformSprite;
-                    }
-
-                    collisionSprite->setPosition(platPos);
-
-                    if (PerfectPixelCollision(player, image2, *collisionSprite, image1,
-                                              intersectionLeft, intersectionTop,
-                                              intersectionWidth, intersectionHeight))
-                    {
-                        b = platTop - playerHeight / 2.f;
-                        db = -playerJumpSpeed;
-
-                        // --- Jump after Touch Detected ---
+                        // If it's a disappearing platform, trigger "touched" logic
                         if (plat->type == PlatformType::Disappearing)
                         {
-                            DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat);
-                            if (dp)
+                            if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
                             {
-                                dp->onPlayerJump(); // ✅ Trigger disappearance after 1 jump
+                                dp->onPlayerTouch(); // Mark that player landed on it
                             }
                         }
-                    }
 
-                    if (!isJetpacked && (plat->type != PlatformType::Disappearing))
-                    {
-                        db = -playerJumpSpeed;
+                        // Calculate the overlapping rectangle (intersection) between player and platform
+                        float intersectionLeft = std::max(playerLeft, platLeft);
+                        float intersectionTop = std::max(playerTop, platTop);
+                        float intersectionRight = std::min(playerRight, platRight);
+                        float intersectionBottom = std::min(playerBottom, platBottom);
+                        float intersectionWidth = intersectionRight - intersectionLeft;
+                        float intersectionHeight = intersectionBottom - intersectionTop;
+
+                        // Choose the correct sprite image for the platform
+                        Sprite *collisionSprite = nullptr;
+                        switch (plat->type)
+                        {
+                        case PlatformType::Normal:
+                        case PlatformType::Moving:
+                            collisionSprite = &normalPlatformSprite;
+                            break;
+                        case PlatformType::Disappearing:
+                            collisionSprite = &disappearingSprite;
+                            break;
+                        default:
+                            collisionSprite = &normalPlatformSprite;
+                        }
+
+                        collisionSprite->setPosition(platPos); // Set the sprite's position to platform's
+
+                        // Perform pixel-perfect collision using overlap bounds
+                        if (PerfectPixelCollision(player, image2, *collisionSprite, image1,
+                                                  intersectionLeft, intersectionTop,
+                                                  intersectionWidth, intersectionHeight))
+                        {
+                            // Align the player's feet to the top of the platform
+                            b = platTop - playerHeight / 2.f;
+
+                            jumped = true; // Mark that jump happened (we landed on something)
+
+                            // If it's a disappearing platform, trigger the "jump" logic to disappear it
+                            if (plat->type == PlatformType::Disappearing)
+                            {
+                                if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
+                                {
+                                    dp->onPlayerJump(); // Trigger disappearance
+                                }
+                            }
+
+                            break; // Stop checking other platforms (only one jump at a time)
+                        }
                     }
+                }
+
+                // Only apply jump force if pixel-perfect collision occurred, and we're not jetpacking
+                if (jumped && !isJetpacked)
+                {
+                    db = -playerJumpSpeed; // Reverse velocity to make the player jump
                 }
             }
 
@@ -647,7 +682,7 @@ void runGame(RenderWindow& window)
 
             // --- NEW: Position jetpack flames relative to player ---
             // Adjust these offsets to fine-tune where the flames appear
-            //flame1.setPosition(player.getPosition().x - playerRadius * 0.3f, player.getPosition().y + playerRadius * 0.8f);
+            // flame1.setPosition(player.getPosition().x - playerRadius * 0.3f, player.getPosition().y + playerRadius * 0.8f);
             jp.setPosition(sf::Vector2f(
                 player.getPosition().x,
                 player.getPosition().y));
@@ -666,13 +701,6 @@ void runGame(RenderWindow& window)
                 jetpackItem.deactivate();
                 jetpackActiveTimer.restart();
             }
-
-            // Shield disappears if ignored too long
-            if (shield.isActive && shieldLifetimeTimer.getElapsedTime().asSeconds() > 10.f)
-            {
-                shield.deactivate();
-            }
-
             // Drawing
             window.clear();
             window.draw(bg);
@@ -708,10 +736,21 @@ void runGame(RenderWindow& window)
 
             if (shield.isActive)
                 shield.draw(window);
-
+            // draw fireball if active
             if (fireball.isActive)
             {
                 fireballSprite.setPosition(fireball.position);
+                //  Flip the sprite based on direction
+                if (fireball.moveRight)
+                {
+                    fireballSprite.setScale({1.f, 1.f}); // Normal facing right
+                }
+                else
+                {
+                    fireballSprite.setScale({-1.f, 1.f}); // Flip horizontally to face left
+                    fireballSprite.setOrigin({fireballSprite.getLocalBounds().size.x, 0.f});
+                }
+
                 window.draw(fireballSprite);
             }
 
@@ -751,15 +790,6 @@ void runGame(RenderWindow& window)
             outputFile << highscore;
             outputFile.close();
         }
-
-        // Cleanup platforms
-        // for (auto *plat : platforms)
-        // {
-        //     delete plat;
-        // }
-        // platforms.clear();
     }
-      cout<<"your score is"<<score<<endl;
-  
-  
+    cout << "your score is" << score << endl;
 }
