@@ -7,7 +7,6 @@ public:
     Vector2f position;
     bool isActive; //isActive refers to the shield powerup shown on the screen before the player takes it
     Texture texture;
-    float scaleFactor = 0.2f; // Smaller size
 
     Shield()
         : position(-100.f, -100.f), isActive(false) {}
@@ -32,7 +31,6 @@ public:
     void draw(RenderWindow& window) {
         if (isActive) {
             Sprite tempSprite(texture);
-            tempSprite.setScale({scaleFactor, scaleFactor}); // Smaller sprite
             tempSprite.setPosition(position);
             window.draw(tempSprite);
         }
@@ -40,7 +38,6 @@ public:
 
     FloatRect getBounds() const {
         Sprite tempSprite(texture);
-        tempSprite.setScale({scaleFactor, scaleFactor});
         tempSprite.setPosition(position);
         return tempSprite.getGlobalBounds();
     }

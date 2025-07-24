@@ -56,7 +56,7 @@ int main()
 
     // Calculate window size as a percentage of screen size (e.g., 70% width, 60% height)
     const sf::Vector2u windowSize(
-        static_cast<unsigned int>((desktopMode.size.x / 2.65f)),
+        static_cast<unsigned int>((desktopMode.size.x / 2.56f)),
         static_cast<unsigned int>((desktopMode.size.y / 1.142857143f)));
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 

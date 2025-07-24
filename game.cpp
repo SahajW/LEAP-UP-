@@ -23,20 +23,19 @@ void runGame(RenderWindow &window)
         static_cast<unsigned int>((desktopMode.size.y / 1.142857143f)));
     srand(static_cast<unsigned>(time(0)));
 
-    const int windowwidth = desktopMode.size.x / 2.65f;
+    const int windowwidth = desktopMode.size.x / 2.56f;
     const int windowheight = desktopMode.size.y / 1.142857143f;
 
     window.setFramerateLimit(60);
 
     const int platformCount = 15;
-    const int platformWidth = 128;
-    const int platformHeight = 21;
-    const int playerWidth = 58;
-    const int playerHeight = 83;
-    const int fireballHeight = 30;
-    const int fireballWidth = 30;
-    const float gameWidth = 1000.f;
-    const float gameHeight = 1400.f;
+    const int platformWidth = windowwidth / 7.815;
+    const int platformHeight = windowheight / 66.666666667; 
+    const int playerWidth = windowwidth / 16.666666667;
+    const int playerHeight = windowheight / 18.666666667; 
+    const int fireballWidth = windowwidth / 19.60784314;
+    const int fireballHeight = windowheight / 40;
+
     int score = 0;
     float worldHeight = 0.f;
 
@@ -55,13 +54,13 @@ void runGame(RenderWindow &window)
     scoreText.setFillColor(Color::White);
     scoreText.setStyle(Text::Bold);
     scoreText.setCharacterSize(36);
-    scoreText.setPosition({10, 10});
+    scoreText.setPosition({windowwidth/100.f,windowheight/140.f});
 
     Text highscoreText(font);
     highscoreText.setFillColor(Color::White);
     highscoreText.setStyle(Text::Bold);
     highscoreText.setCharacterSize(36);
-    highscoreText.setPosition({10, 45});
+    highscoreText.setPosition({windowwidth/100.f, windowheight/31.111111111f});
     highscoreText.setString("High Score: " + to_string(highscore));
 
     // Load platform textures separately
@@ -76,7 +75,7 @@ void runGame(RenderWindow &window)
         !playerleft.loadFromFile("assets/player2.png", false, IntRect({0, 0}, {playerWidth, playerHeight})) ||
         !bgTexture.loadFromFile("assets/bg1.png", false, IntRect({0, 0}, {windowwidth, windowheight})) ||
         !fireballTexture.loadFromFile("assets/fireball.png", false, IntRect({0, 0}, {fireballWidth, fireballHeight})) ||
-        !jplayertexture.loadFromFile("assets/jetpack.png", false, IntRect({0, 0}, {playerWidth, playerHeight})) ||
+        !jplayertexture.loadFromFile("assets/jetpackplayer.png", false, IntRect({0, 0}, {playerWidth, playerHeight})) ||
         !pauseTexture.loadFromFile("assets/pause.png") ||
         !resumeTexture.loadFromFile("assets/resume.png") ||
         !QuitTexture.loadFromFile("assets/quit.png") ||
@@ -191,28 +190,28 @@ void runGame(RenderWindow &window)
     Clock shieldActiveTimer;
     Clock shieldLifetimeTimer;
     bool isShielded = false;
-    float shieldWidth = shield.texture.getSize().x * shield.scaleFactor;
-    float shieldHeight = shield.texture.getSize().y * shield.scaleFactor;
+    float shieldWidth = shield.texture.getSize().x ;
+    float shieldHeight = shield.texture.getSize().y ;
 
     CircleShape shieldAura;
     shieldAura.setRadius(50.f);
     shieldAura.setFillColor(Color(0, 0, 255, 100));
     shieldAura.setOrigin({shieldAura.getRadius(), shieldAura.getRadius()});
 
-    pause.setPosition({850.f, 0.f});
-    pause.setScale({0.25f, 0.25f});
+    pause.setPosition({windowwidth/1.142857143f, 0.f});
+    pause.setScale({windowwidth/4000.f,windowheight/ 5600.f});
 
-    quit.setPosition({300.f, 500.f});
-    quit.setScale({0.5f, 0.5f});
+    quit.setPosition({windowwidth/3.333333333f, windowheight/2.8f});
+    quit.setScale({windowwidth/2000.f, windowheight/2800.f});
 
-    over.setPosition({150.f, 400.f});
-    over.setScale({0.7f, 0.7f});
+    over.setPosition({windowwidth/6.666666667f, windowheight/3.5f});
+    over.setScale({windowwidth/1428.571429f, windowheight/2000.f});
 
-    again.setPosition({300.f, 525.f});
-    again.setScale({0.5f, 0.5f});
+    again.setPosition({windowwidth/3.333333333f, windowheight/2.666666667f});
+    again.setScale({windowwidth/2000.f, windowheight/2800.f});
 
-    resume.setPosition({300.f, 350.f});
-    resume.setScale({0.5f, 0.5f});
+    resume.setPosition({windowwidth/3.333333333f, windowheight/4.f});
+    resume.setScale({windowwidth/2000.f, windowheight/2800.f});
 
     bool isPaused = false;
     bool isGameOver = false;
@@ -477,8 +476,8 @@ void runGame(RenderWindow &window)
                 if (!validPlatformIndices.empty())
                 {
                     int randomIndex = validPlatformIndices[rand() % validPlatformIndices.size()];
-                    float x = platforms[randomIndex]->position.x + (platformWidth - (jetpackItem.texture.getSize().x * jetpackItem.scaleFactor)) / 2.f;
-                    float y = platforms[randomIndex]->position.y - (jetpackItem.texture.getSize().y * jetpackItem.scaleFactor) - 5.f; // Slightly above platform
+                    float x = platforms[randomIndex]->position.x + (platformWidth - (jetpackItem.texture.getSize().x )) / 2.f;
+                    float y = platforms[randomIndex]->position.y - (jetpackItem.texture.getSize().y ) - 5.f; // Slightly above platform
                     jetpackItem.spawn(x, y);
 
                     jetpackLifetimeTimer.restart(); // Start auto-despawn timer here
@@ -787,8 +786,8 @@ void runGame(RenderWindow &window)
             window.draw(again);
 
             // Show final score and high score
-            scoreText.setPosition({windowwidth / 2.f - 200.f, 700.f});
-            highscoreText.setPosition({windowwidth / 2.f - 200.f, 750.f});
+            scoreText.setPosition({windowwidth/3.333333333f, windowheight/2.f});
+            highscoreText.setPosition({windowwidth/3.333333333f, windowheight/1.8666666667f});
             window.draw(scoreText);
             window.draw(highscoreText);
         }
