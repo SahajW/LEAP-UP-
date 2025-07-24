@@ -30,14 +30,19 @@ void runGame(RenderWindow &window)
 
     const int platformCount = 15;
     const int platformWidth = windowwidth / 7.815;
-    const int platformHeight = windowheight / 66.666666667; 
+    const int platformHeight = windowheight / 66.666666667;
     const int playerWidth = windowwidth / 16.666666667;
-    const int playerHeight = windowheight / 18.666666667; 
+    const int playerHeight = windowheight / 18.666666667;
     const int fireballWidth = windowwidth / 19.60784314;
     const int fireballHeight = windowheight / 40;
 
     int score = 0;
     float worldHeight = 0.f;
+
+    int lastShieldScore = -1000;
+    int lastJetpackScore = -1000;
+    const int shieldInterval = 50;   // spawn every 300 score
+    const int jetpackInterval = 200; // spawn every 500 score
 
     int highscore = 0;
     ifstream inputFile("highscore.txt");
@@ -54,13 +59,13 @@ void runGame(RenderWindow &window)
     scoreText.setFillColor(Color::White);
     scoreText.setStyle(Text::Bold);
     scoreText.setCharacterSize(36);
-    scoreText.setPosition({windowwidth/100.f,windowheight/140.f});
+    scoreText.setPosition({windowwidth / 100.f, windowheight / 140.f});
 
     Text highscoreText(font);
     highscoreText.setFillColor(Color::White);
     highscoreText.setStyle(Text::Bold);
     highscoreText.setCharacterSize(36);
-    highscoreText.setPosition({windowwidth/100.f, windowheight/31.111111111f});
+    highscoreText.setPosition({windowwidth / 100.f, windowheight / 31.111111111f});
     highscoreText.setString("High Score: " + to_string(highscore));
 
     // Load platform textures separately
@@ -120,7 +125,7 @@ void runGame(RenderWindow &window)
         if (r < 70)
             plat = new Platform(x, y, false, PlatformType::Normal);
         else if (r < 90)
-            plat = new Platform(x, y, true, PlatformType::Moving);
+            plat = new Platform(x, y, true, PlatformType::Moving, static_cast<float>(rand() % 3 + 2));
         else if (r < 95)
             plat = new ThornPlatform(x, y);
         else
@@ -135,7 +140,7 @@ void runGame(RenderWindow &window)
     const float movespeed = 5.f;
     const float playerJumpSpeed = 10.f;
     const float gravity = 0.2f;
-    float a, b, h = 200; // a=x, b=y
+    float a, b, h = 500; // a=x, b=y
     float da = 0, db = 0;
 
     int midIndex = platformCount / 2;
@@ -168,7 +173,6 @@ void runGame(RenderWindow &window)
         return;
     }
 
-    Clock jetpackSpawnTimer;
     Clock jetpackActiveTimer;
     Clock jetpackLifetimeTimer; // New timer to auto-despawn jetpack
     bool isJetpacked = false;
@@ -186,32 +190,30 @@ void runGame(RenderWindow &window)
 
     Shield shield;
     shield.load();
-    Clock shieldSpawnTimer;
     Clock shieldActiveTimer;
-    Clock shieldLifetimeTimer;
     bool isShielded = false;
-    float shieldWidth = shield.texture.getSize().x ;
-    float shieldHeight = shield.texture.getSize().y ;
+    float shieldWidth = shield.texture.getSize().x;
+    float shieldHeight = shield.texture.getSize().y;
 
     CircleShape shieldAura;
     shieldAura.setRadius(50.f);
     shieldAura.setFillColor(Color(0, 0, 255, 100));
     shieldAura.setOrigin({shieldAura.getRadius(), shieldAura.getRadius()});
 
-    pause.setPosition({windowwidth/1.142857143f, 0.f});
-    pause.setScale({windowwidth/4000.f,windowheight/ 5600.f});
+    pause.setPosition({windowwidth / 1.142857143f, 0.f});
+    pause.setScale({windowwidth / 4000.f, windowheight / 5600.f});
 
-    quit.setPosition({windowwidth/3.333333333f, windowheight/2.8f});
-    quit.setScale({windowwidth/2000.f, windowheight/2800.f});
+    quit.setPosition({windowwidth / 3.333333333f, windowheight / 2.8f});
+    quit.setScale({windowwidth / 2000.f, windowheight / 2800.f});
 
-    over.setPosition({windowwidth/6.666666667f, windowheight/3.5f});
-    over.setScale({windowwidth/1428.571429f, windowheight/2000.f});
+    over.setPosition({windowwidth / 6.666666667f, windowheight / 3.5f});
+    over.setScale({windowwidth / 1428.571429f, windowheight / 2000.f});
 
-    again.setPosition({windowwidth/3.333333333f, windowheight/2.666666667f});
-    again.setScale({windowwidth/2000.f, windowheight/2800.f});
+    again.setPosition({windowwidth / 3.333333333f, windowheight / 2.666666667f});
+    again.setScale({windowwidth / 2000.f, windowheight / 2800.f});
 
-    resume.setPosition({windowwidth/3.333333333f, windowheight/4.f});
-    resume.setScale({windowwidth/2000.f, windowheight/2800.f});
+    resume.setPosition({windowwidth / 3.333333333f, windowheight / 4.f});
+    resume.setScale({windowwidth / 2000.f, windowheight / 2800.f});
 
     bool isPaused = false;
     bool isGameOver = false;
@@ -293,6 +295,12 @@ void runGame(RenderWindow &window)
 
         if (!isPaused && !isGameOver)
         {
+            score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
+            scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
+            bool hardMode = (score >= 1000);                   // Hard mode starts at score 1000
+
+            float gravity = hardMode ? 0.25f : 0.2f;
+            float playerJumpSpeed = hardMode ? 12.f : 10.f;
 
             if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)))
             {
@@ -341,14 +349,20 @@ void runGame(RenderWindow &window)
                     if (lower - upper > fireballHeight + 10.f)
                     {
                         float centerY = upper + (lower - upper) / 2.f - fireballHeight / 2.f;
-                        gaps.push_back(centerY);
+                        float verticalVelocity = db; // Or however you track jump/gravity
+                        float futurePlayerY = player.getPosition().y + verticalVelocity * 15.f;
+
+                        if (centerY < futurePlayerY)
+                        {
+                            gaps.push_back(centerY);
+                        }
                     }
                 }
 
                 if (!gaps.empty())
                 {
                     int index = rand() % gaps.size();
-                    fireball.spawn(gaps[index]);
+                    fireball.spawn(gaps[index], windowwidth);
                     fireballTimer.restart();
                 }
             }
@@ -405,8 +419,9 @@ void runGame(RenderWindow &window)
                         float newX = static_cast<float>(rand() % (window.getSize().x - platformWidth));
 
                         // 🆕 Calculate a good Y position above current platforms
-                        float minGap = 60.f;       // Minimum vertical distance between platforms
-                        float maxY = windowheight; // Start with screen height
+                        float minGap = 60.f;                        // Minimum vertical distance between platforms
+                        float maxY = windowheight;                  // Start with screen height
+                        float platformspeed = hardMode ? 4.f : 2.f; // Speed for moving platforms
 
                         // Find the highest (topmost) platform
                         for (auto *plat : platforms)
@@ -428,7 +443,7 @@ void runGame(RenderWindow &window)
                         if (r < 70)
                             newPlat = new Platform(newX, newY, false, PlatformType::Normal);
                         else if (r < 90)
-                            newPlat = new Platform(newX, newY, true, PlatformType::Moving);
+                            newPlat = new Platform(newX, newY, true, PlatformType::Moving, platformspeed);
                         else if (r < 95)
                             newPlat = new ThornPlatform(newX, newY);
                         else
@@ -455,8 +470,8 @@ void runGame(RenderWindow &window)
 
             // --- Jetpack Spawning Logic Start ---
             // Spawn jetpack every 10-20 seconds if not active and player is not jetpacked
-            if (!jetpackItem.isActive && !isJetpacked &&
-                jetpackSpawnTimer.getElapsedTime().asSeconds() > (10 + rand() % 5) && //"Increased time for jetpack spawnning"
+            if ((score / jetpackInterval) > (lastJetpackScore / jetpackInterval) &&
+                !jetpackItem.isActive && !isJetpacked &&
                 jetpackEffectCooldownTimer.getElapsedTime().asSeconds() > jetpackEffectCooldownDuration)
             {
                 vector<int> validPlatformIndices;
@@ -476,12 +491,10 @@ void runGame(RenderWindow &window)
                 if (!validPlatformIndices.empty())
                 {
                     int randomIndex = validPlatformIndices[rand() % validPlatformIndices.size()];
-                    float x = platforms[randomIndex]->position.x + (platformWidth - (jetpackItem.texture.getSize().x )) / 2.f;
-                    float y = platforms[randomIndex]->position.y - (jetpackItem.texture.getSize().y ) - 5.f; // Slightly above platform
+                    float x = platforms[randomIndex]->position.x + (platformWidth - (jetpackItem.texture.getSize().x)) / 2.f;
+                    float y = platforms[randomIndex]->position.y - (jetpackItem.texture.getSize().y) - 5.f; // Slightly above platform
                     jetpackItem.spawn(x, y);
-
-                    jetpackLifetimeTimer.restart(); // Start auto-despawn timer here
-                    jetpackSpawnTimer.restart();    // Reset spawn timer
+                    lastJetpackScore = (score / jetpackInterval) * jetpackInterval;
                 }
             }
             // --- Jetpack Spawning Logic End ---
@@ -493,17 +506,10 @@ void runGame(RenderWindow &window)
                 isJetpacked = false;
                 jetpackEffectCooldownTimer.restart(); // --- NEW: Start cooldown timer ---
             }
-            // --- Jetpack Duration Logic End ---
-
-            // --- Jetpack Auto-Despawn if not picked up Start ---
-            if (jetpackItem.isActive && jetpackLifetimeTimer.getElapsedTime().asSeconds() > 10.0f)
-            {
-                jetpackItem.deactivate();
-            }
-            // --- Jetpack Auto-Despawn if not picked up End ---
 
             // Update fireball
-            fireball.update(windowwidth);
+            float fireballspeed = hardMode ? 9.f : 6.f; // Adjust speed based on difficulty
+            fireball.update(windowwidth, fireballspeed);
 
             // Calculate player bounds
             float playerLeft = a - playerWidth / 2.f;
@@ -512,7 +518,8 @@ void runGame(RenderWindow &window)
             float playerBottom = b + playerHeight / 2.f;
 
             // Spawn shield powerup between 5 and 15 seconds, if none active or shielded
-            if (!shield.isActive && !isShielded && shieldSpawnTimer.getElapsedTime().asSeconds() > (5 + rand() % 10))
+            if ((score / shieldInterval) > (lastShieldScore / shieldInterval) &&
+                !shield.isActive && !isShielded)
             {
                 vector<int> validPlatformIndices;
 
@@ -536,8 +543,7 @@ void runGame(RenderWindow &window)
                     float y = platforms[randomIndex]->position.y - shieldHeight; // just above platform
                     shield.spawn(x, y);
 
-                    shieldLifetimeTimer.restart();
-                    shieldSpawnTimer.restart();
+                    lastShieldScore = (score / shieldInterval) * shieldInterval;
                 }
             }
 
@@ -581,85 +587,98 @@ void runGame(RenderWindow &window)
                     continue;
                 }
             }
-
             // Collision with platforms
-            for (auto *plat : platforms)
+            // Only attempt platform collision if the player is falling fast enough
+            if (db > 3.3f)
             {
-                if (!plat->isVisible())
-                    continue;
+                bool jumped = false; // Track whether a valid jump (collision) happened
 
-                Vector2f platPos = plat->position;
-
-                float platLeft = platPos.x;
-                float platRight = platPos.x + platformWidth;
-                float platTop = platPos.y;
-                float platBottom = platPos.y + platformHeight;
-
-                if (playerRight > platLeft && playerLeft < platRight &&
-                    playerBottom > platTop && playerTop < platBottom && db > 0)
+                for (auto *plat : platforms) // Loop through all platforms
                 {
-                    if (plat->type == PlatformType::Thorn)
-                    {
-                        isGameOver = true;
-                        break;
-                    }
+                    if (!plat->isVisible()) // Skip invisible platforms
+                        continue;
 
-                    // --- Touch Detected (before collision check) ---
-                    if (plat->type == PlatformType::Disappearing)
+                    Vector2f platPos = plat->position; // Get platform's position
+
+                    // Calculate platform's bounding box
+                    float platLeft = platPos.x;
+                    float platRight = platPos.x + platformWidth;
+                    float platTop = platPos.y;
+                    float platBottom = platPos.y + platformHeight;
+
+                    // Check if the player's bounding box intersects the platform's bounding box
+                    if (playerRight > platLeft && playerLeft < platRight &&
+                        playerBottom > platTop && playerTop < platBottom)
                     {
-                        DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat);
-                        if (dp)
+                        // If it's a thorn platform, trigger game over
+                        if (plat->type == PlatformType::Thorn)
                         {
-                            dp->onPlayerTouch(); // ✅ Record that player has landed
+                            isGameOver = true;
+                            break;
                         }
-                    }
 
-                    // Compute intersection area for pixel-perfect check
-                    float intersectionLeft = std::max(playerLeft, platLeft);
-                    float intersectionTop = std::max(playerTop, platTop);
-                    float intersectionRight = std::min(playerRight, platRight);
-                    float intersectionBottom = std::min(playerBottom, platBottom);
-                    float intersectionWidth = intersectionRight - intersectionLeft;
-                    float intersectionHeight = intersectionBottom - intersectionTop;
-
-                    Sprite *collisionSprite = nullptr;
-                    switch (plat->type)
-                    {
-                    case PlatformType::Normal:
-                    case PlatformType::Moving:
-                        collisionSprite = &normalPlatformSprite;
-                        break;
-                    case PlatformType::Disappearing:
-                        collisionSprite = &disappearingSprite;
-                        break;
-                    default:
-                        collisionSprite = &normalPlatformSprite;
-                    }
-
-                    collisionSprite->setPosition(platPos);
-
-                    if (PerfectPixelCollision(player, image2, *collisionSprite, image1,
-                                              intersectionLeft, intersectionTop,
-                                              intersectionWidth, intersectionHeight))
-                    {
-                        b = platTop - playerHeight / 2.f;
-                        db = -playerJumpSpeed;
-
-                        // --- Jump after Touch Detected ---
+                        // If it's a disappearing platform, trigger "touched" logic
                         if (plat->type == PlatformType::Disappearing)
                         {
-                            DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat);
-                            if (dp)
+                            if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
                             {
-                                dp->onPlayerJump(); // ✅ Trigger disappearance after 1 jump
+                                dp->onPlayerTouch(); // Mark that player landed on it
                             }
                         }
-                    }
 
-                    if (!isJetpacked && (plat->type != PlatformType::Disappearing))
-                    {
-                        db = -10;
+                        // Calculate the overlapping rectangle (intersection) between player and platform
+                        float intersectionLeft = std::max(playerLeft, platLeft);
+                        float intersectionTop = std::max(playerTop, platTop);
+                        float intersectionRight = std::min(playerRight, platRight);
+                        float intersectionBottom = std::min(playerBottom, platBottom);
+                        float intersectionWidth = intersectionRight - intersectionLeft;
+                        float intersectionHeight = intersectionBottom - intersectionTop;
+
+                        // Choose the correct sprite image for the platform
+                        Sprite *collisionSprite = nullptr;
+                        switch (plat->type)
+                        {
+                        case PlatformType::Normal:
+                        case PlatformType::Moving:
+                            collisionSprite = &normalPlatformSprite;
+                            break;
+                        case PlatformType::Disappearing:
+                            collisionSprite = &disappearingSprite;
+                            break;
+                        default:
+                            collisionSprite = &normalPlatformSprite;
+                        }
+
+                        collisionSprite->setPosition(platPos); // Set the sprite's position to platform's
+
+                        // Perform pixel-perfect collision using overlap bounds
+                        if (PerfectPixelCollision(player, image2, *collisionSprite, image1,
+                                                  intersectionLeft, intersectionTop,
+                                                  intersectionWidth, intersectionHeight))
+                        {
+                            // Align the player's feet to the top of the platform
+                            b = platTop - playerHeight / 2.f;
+
+                            jumped = true; // Mark that jump happened (we landed on something)
+
+                            // If it's a disappearing platform, trigger the "jump" logic to disappear it
+                            if (plat->type == PlatformType::Disappearing)
+                            {
+                                if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
+                                {
+                                    dp->onPlayerJump(); // Trigger disappearance
+                                }
+                            }
+
+                            break; // Stop checking other platforms (only one jump at a time)
+                        }
                     }
+                }
+
+                // Only apply jump force if pixel-perfect collision occurred, and we're not jetpacking
+                if (jumped && !isJetpacked)
+                {
+                    db = -playerJumpSpeed; // Reverse velocity to make the player jump
                 }
             }
 
@@ -695,12 +714,6 @@ void runGame(RenderWindow &window)
                 isJetpacked = true;
                 jetpackItem.deactivate();
                 jetpackActiveTimer.restart();
-            }
-
-            // Shield disappears if ignored too long
-            if (shield.isActive && shieldLifetimeTimer.getElapsedTime().asSeconds() > 10.f)
-            {
-                shield.deactivate();
             }
         }
 
@@ -743,6 +756,17 @@ void runGame(RenderWindow &window)
         if (fireball.isActive)
         {
             fireballSprite.setPosition(fireball.position);
+            //  Flip the sprite based on direction
+            if (fireball.moveRight)
+            {
+                fireballSprite.setScale({1.f, 1.f}); // Normal facing right
+            }
+            else
+            {
+                fireballSprite.setScale({-1.f, 1.f}); // Flip horizontally to face left
+                fireballSprite.setOrigin({fireballSprite.getLocalBounds().size.x, 0.f});
+            }
+
             window.draw(fireballSprite);
         }
 
@@ -786,8 +810,8 @@ void runGame(RenderWindow &window)
             window.draw(again);
 
             // Show final score and high score
-            scoreText.setPosition({windowwidth/3.333333333f, windowheight/2.f});
-            highscoreText.setPosition({windowwidth/3.333333333f, windowheight/1.8666666667f});
+            scoreText.setPosition({windowwidth / 3.333333333f, windowheight / 2.f});
+            highscoreText.setPosition({windowwidth / 3.333333333f, windowheight / 1.8666666667f});
             window.draw(scoreText);
             window.draw(highscoreText);
         }

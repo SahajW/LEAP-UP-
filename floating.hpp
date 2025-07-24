@@ -7,7 +7,8 @@ using namespace sf;
 using namespace std;
 
 // Enum to distinguish platform types
-enum class PlatformType {
+enum class PlatformType
+{
     Normal,
     Moving,
     Disappearing,
@@ -15,7 +16,8 @@ enum class PlatformType {
 };
 
 // Base platform class
-class Platform {
+class Platform
+{
 public:
     Vector2f position;
     bool isMoving = false;
@@ -23,12 +25,12 @@ public:
     bool movingLeft = true;
     PlatformType type = PlatformType::Normal;
 
-    Platform(float x, float y, bool moving = false, PlatformType t = PlatformType::Normal)
+    Platform(float x, float y, bool moving = false, PlatformType t = PlatformType::Normal,float baseSpeed=0.f)
         : position(x, y), isMoving(moving), type(t)
     {
-        if (isMoving) {
-            speed = 2.0f + static_cast<float>(rand() % 5); // speed range: 2–6
-            movingLeft = rand() % 2; // random direction
+        if (isMoving)
+        {
+            speed = baseSpeed + static_cast<float>(rand() % 3); //  2–4 or 4–6
         }
     }
 
@@ -36,18 +38,25 @@ public:
     virtual ~Platform() = default;
 
     // Virtual update: overridden by subclasses if needed
-    virtual void update(float windowWidth, float platformWidth) {
-        if (!isMoving) return;
+    virtual void update(float windowWidth, float platformWidth)
+    {
+        if (!isMoving)
+            return;
 
-        if (movingLeft) {
+        if (movingLeft)
+        {
             position.x -= speed;
-            if (position.x < 0) {
+            if (position.x < 0)
+            {
                 position.x = 0;
                 movingLeft = false;
             }
-        } else {
+        }
+        else
+        {
             position.x += speed;
-            if (position.x + platformWidth > windowWidth) {
+            if (position.x + platformWidth > windowWidth)
+            {
                 position.x = windowWidth - platformWidth;
                 movingLeft = true;
             }
@@ -55,13 +64,15 @@ public:
     }
 
     // Visibility check, overridden in DisappearingPlatform
-    virtual bool isVisible() const {
+    virtual bool isVisible() const
+    {
         return true;
     }
 };
 
 // Platform that disappears after 2 seconds
-class DisappearingPlatform : public Platform {
+class DisappearingPlatform : public Platform
+{
 private:
     bool visible = true;
     bool touched = false;
@@ -70,34 +81,42 @@ private:
 public:
     DisappearingPlatform(float x, float y)
         : Platform(x, y, false, PlatformType::Disappearing)
-    {}
+    {
+    }
 
-    void update(float windowWidth, float platformWidth) override {
+    void update(float windowWidth, float platformWidth) override
+    {
         Platform::update(windowWidth, platformWidth);
 
         // If player has touched and jumped afterward, hide
-        if (touched && jumpedAfterTouch) {
+        if (touched && jumpedAfterTouch)
+        {
             visible = false;
         }
     }
 
-    void onPlayerTouch() {
+    void onPlayerTouch()
+    {
         touched = true;
         jumpedAfterTouch = false; // reset if touched again
     }
 
-    void onPlayerJump() {
-        if (touched) {
+    void onPlayerJump()
+    {
+        if (touched)
+        {
             jumpedAfterTouch = true;
         }
     }
 
-    bool isVisible() const override {
+    bool isVisible() const override
+    {
         return visible;
     }
 };
 // Platform that kills player on contact
-class ThornPlatform : public Platform {
+class ThornPlatform : public Platform
+{
 public:
     ThornPlatform(float x, float y)
         : Platform(x, y, false, PlatformType::Thorn)
