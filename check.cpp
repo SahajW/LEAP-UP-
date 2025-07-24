@@ -17,7 +17,7 @@ using namespace sf;
 using namespace std;
 
 void fadeIn(sf::RenderWindow &window, sf::Sprite &background, sf::Sprite &start, sf::Sprite &credits, sf::Sprite &quit,
-            sf::Sprite &volume, sf::Music &music, sf::Sprite &manual, sf::Sprite &menu)
+            sf::Sprite &volume, sf::Music &music, sf::Sprite &manual, sf::Sprite &menu,sf::Sprite &next)
 {
     sf::RectangleShape overlay(sf::Vector2f(window.getSize()));
     overlay.setFillColor(sf::Color(0, 0, 0, 255)); // Fully black
@@ -44,6 +44,7 @@ void fadeIn(sf::RenderWindow &window, sf::Sprite &background, sf::Sprite &start,
         window.draw(volume);     // draw volume button
         window.draw(manual);     // draw manual button
         window.draw(menu);       // draw menu button
+        window.draw(next);       // draw next button
         window.draw(overlay);    // then draw fading black overlay
         window.display();
     }
@@ -62,7 +63,7 @@ int main()
 
     RenderWindow window(VideoMode({windowSize.x, windowSize.y}), "Leap UP", Style::Titlebar | Style::Close);
 
-    sf::Texture background, start, credits, quit, volume, mute, manual, start2, manual2, credits2, exit2, menu;
+    sf::Texture background, start, credits, quit, volume, mute, manual, start2, manual2, credits2, exit2, menu, next;
 
     if (!background.loadFromFile("assets/bg1.png") ||
         !start.loadFromFile("assets/play.png") ||
@@ -75,7 +76,8 @@ int main()
         !manual2.loadFromFile("assets/manual2.png") ||
         !credits2.loadFromFile("assets/credits2.png") ||
         !exit2.loadFromFile("assets/exit2.png") ||
-        !menu.loadFromFile("assets/menu.png"))
+        !menu.loadFromFile("assets/menu.png") ||
+        !next.loadFromFile("assets/next.png"))
     {
         return -1; // error loading image
     }
@@ -91,6 +93,7 @@ int main()
     sf::Sprite Credits2(credits2);
     sf::Sprite Exit2(exit2);
     sf::Sprite Menu(menu);
+    sf::Sprite Next(next);
 
     sf::Music music1; // music sprite
     if (!music1.openFromFile("assets/music.mp3"))
@@ -109,6 +112,22 @@ int main()
     }
     music2.setLooping(true); // music2 loop
 
+    sf::Music music3;
+    if (!music3.openFromFile("assets/music1.mp3"))
+    {
+        std::cerr << "Failed to load music3\n";
+        return -1;
+    }
+    music3.setLooping(true);
+
+    sf::Music music4;
+    if (!music4.openFromFile("assets/music4.mp3"))
+    {
+        std::cerr << "Failed to load music4\n";
+        return -1;
+    }
+    music4.setLooping(true);
+
     sf::Music mouse;
     if (!mouse.openFromFile("assets/mouse.wav"))
     {
@@ -119,24 +138,27 @@ int main()
     mouse.setLooping(false); // mouse sound not looping
 
     bool musicOn = true;
-    //Menu.setPosition({275.f, 220.f}); // Set the position of the menu background
-    Menu.setPosition({windowSize.x /3.636363636f , windowSize.y /6.363636364f});
-    //Start.setPosition({240.f, 350.f});
+    bool nextmusic = true;
+    // Menu.setPosition({275.f, 220.f}); // Set the position of the menu background
+    Menu.setPosition({windowSize.x / 3.636363636f, windowSize.y / 6.363636364f});
+    // Start.setPosition({240.f, 350.f});
     Start.setPosition({windowSize.x / 4.166666667f, windowSize.y / 4.f});
     // Manual.setPosition({240.f, 550.f});
     Manual.setPosition({windowSize.x / 4.166666667f, windowSize.y / 2.545454545f});
-    //Credit.setPosition({240.f, 750.f});
+    // Credit.setPosition({240.f, 750.f});
     Credit.setPosition({windowSize.x / 4.166666667f, windowSize.y / 1.866666667f});
-    //Quit.setPosition({240.f, 950.f});
+    // Quit.setPosition({240.f, 950.f});
     Quit.setPosition({windowSize.x / 4.166666667f, windowSize.y / 1.473684211f});
-    //Start2.setPosition({240.f, 350.f});
+    // Start2.setPosition({240.f, 350.f});
     Start2.setPosition({windowSize.x / 4.166666667f, windowSize.y / 4.f});
+    Next.setPosition({windowSize.x / 7.5f, windowSize.y / 90.f});
 
     // Volume.setScale({0.2f, 0.2f});
     Volume.setScale({windowSize.x / 5000.f, windowSize.y / 7000.f});
-    //Menu.setScale({0.8f, 0.8f});
+    // Menu.setScale({0.8f, 0.8f});
     Menu.setScale({windowSize.x / 1250.f, windowSize.y / 1750.f});
-    //Start.setScale({0.6f, 0.6f});
+    // Start.setScale({0.6f, 0.6f});
+    Next.setScale({windowSize.x / 7000.f, windowSize.y / 9800.f});
     Start.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
     Manual.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
     Credit.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
@@ -144,7 +166,7 @@ int main()
     Start2.setScale({windowSize.x / 1666.666667f, windowSize.y / 2333.333333f});
 
     Scene currentScene = Scene::Menu;
-    fadeIn(window, bg, Start, Credit, Quit, Volume, music1, Manual, Menu); // Fade in effect
+    fadeIn(window, bg, Start, Credit, Quit, Volume, music1, Manual, Menu, Next); // Fade in effect
 
     // Main application loop
     // Main application loop
@@ -237,15 +259,28 @@ int main()
                             // Call the game function. This function is assumed to run its own loop
                             // and return control to main() when the game is over (e.g., player loses).
                             music1.stop();
-                            music2.play();
+                            music3.stop();
+                            music2.stop();
+                            music4.stop();
+
+                            if (nextmusic)
+                                music2.play(); // If menu was playing music1, play music2
+                            else
+                                music4.play(); // If menu was playing music3, play music4
 
                             runGame(window);
                             // IMPORTANT: After runGame returns, reapply the menu view.
                             // The game might have changed the window's view, so we need to reset it
                             // for the menu to display correctly.
                             music2.stop();
+                            music4.stop();
                             if (musicOn)
-                                music1.play();
+                            {
+                                if (nextmusic)
+                                    music1.play();
+                                else
+                                    music3.play();
+                            }
                             // window.setView(gameView);
                             //  Reset button textures to original state in case hover was active
                             Start.setTexture(start);
@@ -273,13 +308,46 @@ int main()
                             musicOn = !musicOn; // Toggle music state
                             if (musicOn)
                             {
-                                music1.play();
-                                Volume.setTexture(volume); // Set volume on texture
+                                if (nextmusic)
+                                {
+                                    music1.play();
+                                    music2.stop(); // optional: ensure game music isn’t still playing
+                                }
+                                else
+                                {
+                                    music3.play();
+                                    music4.stop();
+                                }
+                                Volume.setTexture(volume);
                             }
                             else
                             {
-                                music1.pause();
-                                Volume.setTexture(mute); // Set volume off texture
+                                if (nextmusic)
+                                {
+                                    music1.pause();
+                                    music2.pause();
+                                }
+                                else
+                                {
+                                    music3.pause();
+                                    music4.pause();
+                                }
+                                Volume.setTexture(mute);
+                            }
+                        }
+                        else if (Next.getGlobalBounds().contains(mousePos))
+                        {
+                            if (nextmusic)
+                            {
+                                music1.stop();
+                                music3.play();
+                                nextmusic = false;
+                            }
+                            else
+                            {
+                                music3.stop();
+                                music1.play();
+                                nextmusic = true;
                             }
                         }
                         // The Credits button currently has no click action, but its hover effect will work.
@@ -299,6 +367,8 @@ int main()
             window.draw(Credit); // Draw the "Credits" button
             window.draw(Quit);   // Draw the "Quit" button
             window.draw(Volume); // Draw the "Volume" toggle button
+            window.draw(Next);   
+        
         }
 
         window.display();
