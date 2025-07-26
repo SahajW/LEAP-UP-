@@ -8,6 +8,7 @@
             "args": [
                 "game.cpp",
                 "manual.cpp",
+                "credits.cpp",
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",

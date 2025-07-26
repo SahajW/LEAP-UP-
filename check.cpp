@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "manual.hpp"
+#include "credits.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>
@@ -10,7 +11,8 @@ enum class Scene
 {
     Menu,
     Game,
-    Manual
+    Manual,
+    Credits
 };
 
 using namespace sf;
@@ -303,6 +305,21 @@ int main()
                             Quit.setTexture(quit);
                             currentScene = Scene::Menu; // Return to menu scene after manual closes
                         }
+                         else if (Credit.getGlobalBounds().contains(mousePos))
+                        {
+                            currentScene = Scene::Credits; // Change scene to Manual
+                            // Call the manual function. Assumed to run its own loop and return.
+                            runCredits(window);
+                            // Reapply the menu view after manual returns
+                            // window.setView(gameView);
+                            // Reset button textures
+                            Start.setTexture(start);
+                            Manual.setTexture(manual);
+                            Credit.setTexture(credits);
+                            Quit.setTexture(quit);
+                            currentScene = Scene::Menu; // Return to menu scene after manual closes
+                        }
+                        
                         else if (Volume.getGlobalBounds().contains(mousePos))
                         {
                             musicOn = !musicOn; // Toggle music state

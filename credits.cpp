@@ -1,4 +1,4 @@
-#include "manual.hpp"
+#include "credits.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
@@ -7,30 +7,30 @@ enum class Scene
     Menu,
     Game,
     Manual,
-    Credits,
+    Credits
 };
 
 using namespace sf;
 using namespace std;
 
-void runManual(sf::RenderWindow &window)
+void runCredits(sf::RenderWindow &window)
 {
     VideoMode desktopMode = VideoMode::getDesktopMode();
-
+    
     const sf::Vector2u windowSize(
         static_cast<unsigned int>((desktopMode.size.x / 2.56f)),
         static_cast<unsigned int>((desktopMode.size.y / 1.142857143f)));
 
-    sf::Texture manualp, back;
-    !manualp.loadFromFile("assets/manualp.png"); // Load the manual image
-    !back.loadFromFile("assets/back.png");       // Load the background image
+    sf::Texture creditp, back;
+    !creditp.loadFromFile("assets/creditsp.png"); // Load the manual image
+    !back.loadFromFile("assets/back.png"); // Load the background image
 
-    sf::Sprite Manualp(manualp);
+    sf::Sprite Creditp(creditp);
     sf::Sprite Back(back);
 
     Back.setPosition({windowSize.x/1.582278481f, windowSize.y/1.186440678f});
 
-    Scene currentScene = Scene::Manual;
+    Scene currentScene = Scene::Credits;
     Back.setScale({windowSize.x / 2000.f, windowSize.y / 2800.f});
     while (window.isOpen())
     { // Loop to hold the window
@@ -41,7 +41,7 @@ void runManual(sf::RenderWindow &window)
                 continue;
 
             const sf::Event &event = eventOpt.value();
-            if (currentScene == Scene::Manual)
+            if (currentScene == Scene::Credits)
             {
                 sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -67,7 +67,7 @@ void runManual(sf::RenderWindow &window)
                 {
                     window.close();
                 }
-                window.draw(Manualp);
+                window.draw(Creditp);
                 window.draw(Back);
                 window.display();
             }

@@ -138,7 +138,7 @@ void runGame(RenderWindow &window)
     player.setOrigin({playerWidth / 2.f, playerHeight / 2.f});
 
     const float movespeed = 5.f;
-    const float playerJumpSpeed = 10.f;
+    const float playerJumpSpeed = 12.f;
     const float gravity = 0.2f;
     float a, b, h = 500; // a=x, b=y
     float da = 0, db = 0;
@@ -300,7 +300,7 @@ void runGame(RenderWindow &window)
             bool hardMode = (score >= 1000);                   // Hard mode starts at score 1000
 
             float gravity = hardMode ? 0.25f : 0.2f;
-            float playerJumpSpeed = hardMode ? 12.f : 10.f;
+            float playerJumpSpeed = hardMode ? 14.f : 12.f;
 
             if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)))
             {
@@ -589,96 +589,59 @@ void runGame(RenderWindow &window)
             }
             // Collision with platforms
             // Only attempt platform collision if the player is falling fast enough
+            // Collision with platforms
             if (db > 3.3f)
             {
-                bool jumped = false; // Track whether a valid jump (collision) happened
+                bool jumped = false;
 
-                for (auto *plat : platforms) // Loop through all platforms
+                for (auto *plat : platforms)
                 {
-                    if (!plat->isVisible()) // Skip invisible platforms
+                    if (!plat->isVisible())
                         continue;
 
-                    Vector2f platPos = plat->position; // Get platform's position
+                    float platTop = plat->position.y;
+                    float platLeft = plat->position.x;
+                    float platRight = platLeft + platformWidth;
 
-                    // Calculate platform's bounding box
-                    float platLeft = platPos.x;
-                    float platRight = platPos.x + platformWidth;
-                    float platTop = platPos.y;
-                    float platBottom = platPos.y + platformHeight;
+                    float playerBottom = b + playerHeight / 2.f;
+                    float playerPrevBottom = b + playerHeight / 2.f - db; // previous frame's bottom
+                    float playerLeft = a - playerWidth / 2.f;
+                    float playerRight = a + playerWidth / 2.f;
 
-                    // Check if the player's bounding box intersects the platform's bounding box
-                    if (playerRight > platLeft && playerLeft < platRight &&
-                        playerBottom > platTop && playerTop < platBottom)
+                    // 🧠 NEW KEY CHECK — Only if feet were above last frame, and now touched top
+                    bool landedOnTop = playerPrevBottom <= platTop &&
+                                       playerBottom >= platTop &&
+                                       playerRight > platLeft &&
+                                       playerLeft < platRight;
+
+                    if (landedOnTop)
                     {
-                        // If it's a thorn platform, trigger game over
+                        // Platform type check
                         if (plat->type == PlatformType::Thorn)
                         {
                             isGameOver = true;
                             break;
                         }
 
-                        // If it's a disappearing platform, trigger "touched" logic
                         if (plat->type == PlatformType::Disappearing)
                         {
                             if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
-                            {
-                                dp->onPlayerTouch(); // Mark that player landed on it
-                            }
+                                dp->onPlayerTouch();
                         }
 
-                        // Calculate the overlapping rectangle (intersection) between player and platform
-                        float intersectionLeft = std::max(playerLeft, platLeft);
-                        float intersectionTop = std::max(playerTop, platTop);
-                        float intersectionRight = std::min(playerRight, platRight);
-                        float intersectionBottom = std::min(playerBottom, platBottom);
-                        float intersectionWidth = intersectionRight - intersectionLeft;
-                        float intersectionHeight = intersectionBottom - intersectionTop;
+                        // Adjust Y position exactly to top of platform
+                        b = platTop - playerHeight / 2.f;
 
-                        // Choose the correct sprite image for the platform
-                        Sprite *collisionSprite = nullptr;
-                        switch (plat->type)
+                        if (plat->type == PlatformType::Disappearing)
                         {
-                        case PlatformType::Normal:
-                        case PlatformType::Moving:
-                            collisionSprite = &normalPlatformSprite;
-                            break;
-                        case PlatformType::Disappearing:
-                            collisionSprite = &disappearingSprite;
-                            break;
-                        default:
-                            collisionSprite = &normalPlatformSprite;
+                            if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
+                                dp->onPlayerJump();
                         }
 
-                        collisionSprite->setPosition(platPos); // Set the sprite's position to platform's
-
-                        // Perform pixel-perfect collision using overlap bounds
-                        if (PerfectPixelCollision(player, image2, *collisionSprite, image1,
-                                                  intersectionLeft, intersectionTop,
-                                                  intersectionWidth, intersectionHeight))
-                        {
-                            // Align the player's feet to the top of the platform
-                            b = platTop - playerHeight / 2.f;
-
-                            jumped = true; // Mark that jump happened (we landed on something)
-
-                            // If it's a disappearing platform, trigger the "jump" logic to disappear it
-                            if (plat->type == PlatformType::Disappearing)
-                            {
-                                if (DisappearingPlatform *dp = dynamic_cast<DisappearingPlatform *>(plat))
-                                {
-                                    dp->onPlayerJump(); // Trigger disappearance
-                                }
-                            }
-
-                            break; // Stop checking other platforms (only one jump at a time)
-                        }
+                        db = -playerJumpSpeed;
+                        jumped = true;
+                        break;
                     }
-                }
-
-                // Only apply jump force if pixel-perfect collision occurred, and we're not jetpacking
-                if (jumped && !isJetpacked)
-                {
-                    db = -playerJumpSpeed; // Reverse velocity to make the player jump
                 }
             }
 
