@@ -297,7 +297,7 @@ void runGame(RenderWindow &window)
         {
             score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
             scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
-            bool hardMode = (score >= 1000);                   // Hard mode starts at score 1000
+            bool hardMode = (score >= 200);                   // Hard mode starts at score 200
 
             float gravity = hardMode ? 0.25f : 0.2f;
             float playerJumpSpeed = hardMode ? 14.f : 12.f;
