@@ -124,5 +124,4 @@ public:
         // No special behavior in update() (yet)
     }
 
-    // You could override update() or add effects if needed
 };

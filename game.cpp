@@ -41,8 +41,8 @@ void runGame(RenderWindow &window)
 
     int lastShieldScore = -1000;
     int lastJetpackScore = -1000;
-    const int shieldInterval = 50;   // spawn every 300 score
-    const int jetpackInterval = 200; // spawn every 500 score
+    const int shieldInterval = 50;   // spawn every 50 score
+    const int jetpackInterval = 200; // spawn every 200 score
 
     int highscore = 0;
     ifstream inputFile("highscore.txt");
@@ -105,7 +105,6 @@ void runGame(RenderWindow &window)
         quit2(QuitTexture2), over(GameOver), again(TryAgain), again2(TryAgain2);
     bool facingRight = true;
 
-    // jp.scale({ 0.2f, 0.2f }); // Scale down the player sprite to fit the game
     jp.setOrigin({playerWidth / 2.f, playerHeight / 2.f}); // setting its scale to center
 
     // platform creation
@@ -178,7 +177,6 @@ void runGame(RenderWindow &window)
     bool isJetpacked = false;
     const float jetpackBoostSpeed = -8.0f; // Stronger upward velocity when jetpacked
 
-    // New: Clock for jetpack spawn cooldown after effect wears off
     Clock jetpackEffectCooldownTimer;
     const float jetpackEffectCooldownDuration = 5.0f; // For example, 5 seconds cooldown
     // Initialize to a high value so it doesn't block initial spawn
@@ -295,12 +293,12 @@ void runGame(RenderWindow &window)
 
         if (!isPaused && !isGameOver)
         {
-            score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
-            scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
-            bool hardMode = (score >= 200);                   // Hard mode starts at score 200
+            score = static_cast<int>(worldHeight / 50);
+            scoreText.setString("Score: " + to_string(score));
+            bool hardMode = (score >= 200); // Hard mode starts at score 200
 
-            float gravity = hardMode ? 0.25f : 0.2f;
-            float playerJumpSpeed = hardMode ? 14.f : 12.f;
+            float gravity = hardMode ? 0.22f : 0.2f;
+            float playerJumpSpeed = hardMode ? 13.f : 12.f;
 
             if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)))
             {
@@ -394,8 +392,8 @@ void runGame(RenderWindow &window)
                 isGameOver = true;
                 continue;
             }
-            score = static_cast<int>(worldHeight / 50);        // <-- SCORE RELATED
-            scoreText.setString("Score: " + to_string(score)); // <-- SCORE RELATED
+            score = static_cast<int>(worldHeight / 50);
+            scoreText.setString("Score: " + to_string(score));
 
             if (score > highscore)
             {
@@ -418,7 +416,6 @@ void runGame(RenderWindow &window)
                     {
                         float newX = static_cast<float>(rand() % (window.getSize().x - platformWidth));
 
-                        // 🆕 Calculate a good Y position above current platforms
                         float minGap = 60.f;                        // Minimum vertical distance between platforms
                         float maxY = windowheight;                  // Start with screen height
                         float platformspeed = hardMode ? 4.f : 2.f; // Speed for moving platforms
@@ -504,7 +501,7 @@ void runGame(RenderWindow &window)
             if (isJetpacked && jetpackActiveTimer.getElapsedTime().asSeconds() > 5.0f)
             {
                 isJetpacked = false;
-                jetpackEffectCooldownTimer.restart(); // --- NEW: Start cooldown timer ---
+                jetpackEffectCooldownTimer.restart();
             }
 
             // Update fireball
@@ -588,7 +585,6 @@ void runGame(RenderWindow &window)
                 }
             }
             // Collision with platforms
-            // Only attempt platform collision if the player is falling fast enough
             // Collision with platforms
             if (db > 3.3f)
             {
@@ -608,7 +604,6 @@ void runGame(RenderWindow &window)
                     float playerLeft = a - playerWidth / 2.f;
                     float playerRight = a + playerWidth / 2.f;
 
-                    // 🧠 NEW KEY CHECK — Only if feet were above last frame, and now touched top
                     bool landedOnTop = playerPrevBottom <= platTop &&
                                        playerBottom >= platTop &&
                                        playerRight > platLeft &&
@@ -657,9 +652,6 @@ void runGame(RenderWindow &window)
 
             player.setPosition({a, b});
 
-            // --- NEW: Position jetpack flames relative to player ---
-            // Adjust these offsets to fine-tune where the flames appear
-            /*flame1.setPosition(player.getPosition().x - playerRadius * 0.3f, player.getPosition().y + playerRadius * 0.8f);*/
             jp.setPosition(sf::Vector2f(
                 player.getPosition().x,
                 player.getPosition().y));

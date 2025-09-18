@@ -57,11 +57,6 @@ void runManual(sf::RenderWindow &window)
                         }
                     }
 
-                    if (Back.getGlobalBounds().contains(mousePos))
-                    {
-                        currentScene = Scene::Menu;
-                        return; // Return to menu
-                    }
                 }
                 if (event.is<sf::Event::Closed>())
                 {
